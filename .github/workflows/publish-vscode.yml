@@ -1,0 +1,27 @@
+name: Publish VS Code Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Build extension
+        working-directory: ./vscode-extension
+        run: |
+          npm ci
+          npm run compile
+      - name: Package & Publish
+        uses: crazy-max/ghaction-vscode@v1
+        with:
+          package-folder: ./vscode-extension
+        env:
+          VSCE_TOKEN: ${{ secrets.VSCE_TOKEN }}

@@ -73,6 +73,14 @@ ameck-copilot
 ### Chat
 Have natural conversations about code. Ask questions, get explanations, and receive coding help.
 
+### Modes
+The assistant now supports multiple modes to tailor behavior:
+
+- **Ask** — General Q&A and conversational assistance (default)
+- **Agent** — Proposes prioritized actions, outlines goals, and asks clarifying questions when needed
+- **Edit** — Produces edits/patches or unified diffs for code and text
+- **Plan** — Generates concise, actionable plans with numbered steps and acceptance criteria
+
 ### Code Analysis
 - **Explain** - Get detailed explanations of code
 - **Review** - Get code quality feedback
@@ -85,6 +93,16 @@ Have natural conversations about code. Ask questions, get explanations, and rece
 Describe what you want to build and get production-ready code with proper error handling.
 
 ## 🤖 Available Models
+
+## 📢 Publishing
+This project can be published in three distribution channels:
+
+- **PyPI** (Python package) — installable via `pip install ameck-copilot`.
+- **VS Code Marketplace** — a minimal extension is included in `vscode-extension/` that opens the local web UI or starts the server.
+- **GitHub** — recommended repo: `https://github.com/QuantBender/ameck-copilot` (I can create it if you provide a token).
+
+See `RELEASE.md` for step-by-step publishing instructions and how to add required secrets.
+
 
 | Model | Description |
 |-------|-------------|

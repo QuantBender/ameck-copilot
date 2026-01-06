@@ -22,14 +22,25 @@ async def stream_response(
     service: GroqService,
     message: str,
     conversation_history: list,
+    mode: str = "ask",
     temperature: float = None,
     max_tokens: int = None,
     model: str = None
 ) -> AsyncGenerator[str, None]:
-    """Generate SSE stream for chat response"""
+    """Generate SSE stream for chat response. Supports mode-specific prompts."""
     try:
+        # Build a mode-aware prompt when necessary
+        if mode == "plan":
+            prompt = f"""You are in Plan mode. Produce a concise summary followed by a numbered, actionable plan with acceptance criteria. Include a JSON: marker containing the steps as objects.\n\nUser request:\n{message}"""
+        elif mode == "edit":
+            prompt = f"""You are in Edit mode. The user will supply code or text and desired edits. Output a unified diff or patch and, if unclear, ask a clarifying question.\n\nUser input:\n{message}"""
+        elif mode == "agent":
+            prompt = f"""You are in Agent mode. Summarize the goal, propose prioritized actions with expected outcomes, and ask clarifying questions if needed.\n\nUser request:\n{message}"""
+        else:
+            prompt = message
+
         async for chunk in service.chat_stream(
-            message=message,
+            message=prompt,
             conversation_history=conversation_history,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -62,6 +73,7 @@ async def chat(request: ChatRequest):
                     service=service,
                     message=request.message,
                     conversation_history=request.conversation_history,
+                    mode=(request.mode.value if hasattr(request.mode, 'value') else request.mode),
                     temperature=request.temperature,
                     max_tokens=request.max_tokens,
                     model=request.model
@@ -74,13 +86,61 @@ async def chat(request: ChatRequest):
                 }
             )
         else:
-            response = await service.chat(
-                message=request.message,
-                conversation_history=request.conversation_history,
-                temperature=request.temperature,
-                max_tokens=request.max_tokens,
-                model=request.model
-            )
+            # Non-streaming: dispatch to mode-specific handlers
+            if getattr(request, 'mode', None) and getattr(request.mode, 'value', str(request.mode)) == 'plan':
+                raw = await service.plan(
+                    message=request.message,
+                    conversation_history=request.conversation_history,
+                    temperature=request.temperature,
+                    max_tokens=request.max_tokens,
+                    model=request.model
+                )
+                structured = None
+                message_text = raw
+                # Try to parse JSON after 'JSON:' marker
+                if 'JSON:' in raw:
+                    try:
+                        parts = raw.split('JSON:', 1)
+                        message_text = parts[0].strip()
+                        json_part = parts[1].strip()
+                        # Attempt to find the JSON array bounds
+                        start = json_part.find('[')
+                        end = json_part.rfind(']')
+                        if start != -1 and end != -1 and end > start:
+                            json_str = json_part[start:end+1]
+                            structured = json.loads(json_str)
+                    except Exception:
+                        structured = None
+
+                return ChatResponse(
+                    message=message_text,
+                    model=request.model or service.settings.model_name,
+                    structured={'plan': structured} if structured is not None else None
+                )
+            elif getattr(request, 'mode', None) and getattr(request.mode, 'value', str(request.mode)) == 'edit':
+                response = await service.edit(
+                    message=request.message,
+                    conversation_history=request.conversation_history,
+                    temperature=request.temperature,
+                    max_tokens=request.max_tokens,
+                    model=request.model
+                )
+            elif getattr(request, 'mode', None) and getattr(request.mode, 'value', str(request.mode)) == 'agent':
+                response = await service.agent(
+                    message=request.message,
+                    conversation_history=request.conversation_history,
+                    temperature=request.temperature,
+                    max_tokens=request.max_tokens,
+                    model=request.model
+                )
+            else:
+                response = await service.chat(
+                    message=request.message,
+                    conversation_history=request.conversation_history,
+                    temperature=request.temperature,
+                    max_tokens=request.max_tokens,
+                    model=request.model
+                )
             
             return ChatResponse(
                 message=response,

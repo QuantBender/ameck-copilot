@@ -199,6 +199,81 @@ Provide only the completion, not the entire code. The completion should naturall
 
         return await self.chat(prompt, temperature=0.3)  # Lower temperature for more deterministic completions
 
+    async def plan(
+        self,
+        message: str,
+        conversation_history: Optional[List[Message]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        model: Optional[str] = None
+    ) -> str:
+        """Produce a clear, actionable plan with numbered steps and a short summary."""
+        plan_prompt = f"""You are in Plan mode. Given the user's request, produce a concise 1-2 sentence summary followed by a numbered list of actionable steps. For each step provide a short acceptance criteria. Finally, include a JSON array under a 'JSON:' marker with the steps as objects {{"id": <n>, "title": "...", "description": "...", "estimate": "<optional>"}}.
+
+User request:
+{message}
+"""
+        if conversation_history:
+            plan_prompt = f"Context: {conversation_history[-1].content}\n\n{plan_prompt}"
+        return await self.chat(
+            plan_prompt,
+            conversation_history=conversation_history,
+            temperature=temperature if temperature is not None else 0.0,
+            max_tokens=max_tokens or self.settings.max_tokens,
+            model=model
+        )
+
+    async def edit(
+        self,
+        message: str,
+        conversation_history: Optional[List[Message]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        model: Optional[str] = None
+    ) -> str:
+        """Produce a clear set of edits or a unified diff to apply to the user's code or text."""
+        edit_prompt = f"""You are in Edit mode. The user will supply code or text and a description of desired edits. Produce a clear unified diff or a set of patch instructions (use '---' and '+++' / unified diff format if possible). If the instructions are ambiguous, ask a clarifying question. User input:
+
+{message}
+"""
+        return await self.chat(
+            edit_prompt,
+            conversation_history=conversation_history,
+            temperature=temperature if temperature is not None else 0.2,
+            max_tokens=max_tokens or self.settings.max_tokens,
+            model=model
+        )
+
+    async def agent(
+        self,
+        message: str,
+        conversation_history: Optional[List[Message]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        model: Optional[str] = None
+    ) -> str:
+        """Act as an Agent: propose objectives, step-by-step actions, and when appropriate, ask clarifying questions or propose follow-ups.
+
+        Include clear actions, estimated effort, and explicit next steps that a developer could follow."""
+        agent_prompt = f"""You are in Agent mode. Read the user's request and respond with:
+1) A short goal statement summarizing what you will accomplish;
+2) A prioritized, numbered list of actions with expected outcomes and rough effort estimates;
+3) Explicit next steps and any clarifying questions.
+
+Format the actions as a numbered list and include a JSON block only if the user asks for machine-readable output.
+
+User request:
+
+{message}
+"""
+        return await self.chat(
+            agent_prompt,
+            conversation_history=conversation_history,
+            temperature=temperature if temperature is not None else 0.2,
+            max_tokens=max_tokens or self.settings.max_tokens,
+            model=model
+        )
+
 
 # Singleton instance
 _groq_service: Optional[GroqService] = None

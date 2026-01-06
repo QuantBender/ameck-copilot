@@ -29,6 +29,8 @@ class AmeckCopilot {
         this.chatInput = document.getElementById('chatInput');
         this.sendBtn = document.getElementById('sendBtn');
         this.newChatBtn = document.getElementById('newChatBtn');
+        this.modeSelect = document.getElementById('modeSelect');
+        this.currentMode = 'ask';
         
         // Code analysis elements
         this.codeInput = document.getElementById('codeInput');
@@ -45,6 +47,9 @@ class AmeckCopilot {
         
         // Model selector
         this.modelSelect = document.getElementById('modelSelect');
+        
+        // Mode selector
+        this.modeSelect.addEventListener('change', (e) => this.changeMode(e.target.value));
         
         // Loading overlay
         this.loadingOverlay = document.getElementById('loadingOverlay');
@@ -166,7 +171,8 @@ class AmeckCopilot {
                     message: message,
                     conversation_history: this.conversationHistory.slice(0, -1), // Exclude current message
                     stream: true,
-                    model: this.selectedModel
+                    model: this.selectedModel,
+                    mode: this.currentMode
                 })
             });
             
@@ -208,6 +214,21 @@ class AmeckCopilot {
                                     role: 'assistant',
                                     content: fullContent
                                 });
+
+                                // If Plan mode, attempt to extract structured JSON and render it
+                                if (this.currentMode === 'plan') {
+                                    const structured = this.extractJSONFromText(fullContent);
+                                    if (structured) {
+                                        this.renderStructuredPlan(contentDiv, structured);
+                                    }
+                                }
+
+                                // If Edit mode and content looks like a unified diff, add download button
+                                if (this.currentMode === 'edit') {
+                                    if (/^---\s|^diff --git/m.test(fullContent)) {
+                                        this.addPatchDownload(contentDiv, fullContent);
+                                    }
+                                }
                             }
                         } catch (parseError) {
                             // Ignore parse errors for incomplete JSON
@@ -309,6 +330,71 @@ class AmeckCopilot {
             hljs.highlightElement(block);
         });
     }
+
+    extractJSONFromText(text) {
+        const idx = text.indexOf('JSON:');
+        if (idx === -1) return null;
+        const after = text.slice(idx + 'JSON:'.length);
+        const start = after.indexOf('[');
+        const end = after.lastIndexOf(']');
+        if (start === -1 || end === -1) return null;
+        const jsonStr = after.slice(start, end + 1);
+        try {
+            return JSON.parse(jsonStr);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    renderStructuredPlan(container, structured) {
+        // structured expected to be an array of step objects
+        const wrapper = document.createElement('div');
+        wrapper.className = 'structured-plan';
+        const title = document.createElement('h3');
+        title.textContent = 'Plan (parsed)';
+        wrapper.appendChild(title);
+
+        const list = document.createElement('ol');
+        for (const step of structured) {
+            const li = document.createElement('li');
+            const strong = document.createElement('strong');
+            strong.textContent = step.title || `Step ${step.id || ''}`;
+            li.appendChild(strong);
+
+            const p = document.createElement('p');
+            p.textContent = step.description || '';
+            li.appendChild(p);
+
+            if (step.estimate) {
+                const est = document.createElement('div');
+                est.className = 'estimate';
+                est.textContent = `Estimate: ${step.estimate}`;
+                li.appendChild(est);
+            }
+            list.appendChild(li);
+        }
+
+        wrapper.appendChild(list);
+        container.appendChild(wrapper);
+    }
+
+    addPatchDownload(container, patchText) {
+        const btn = document.createElement('button');
+        btn.className = 'download-patch-btn';
+        btn.textContent = 'Download Patch';
+        btn.addEventListener('click', () => {
+            const blob = new Blob([patchText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'patch.diff';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        });
+        container.appendChild(btn);
+    }
     
     copyCode(button) {
         const wrapper = button.closest('.code-block-wrapper');
@@ -345,6 +431,19 @@ class AmeckCopilot {
     changeModel(model) {
         this.selectedModel = model;
         console.log(`Model changed to: ${model}`);
+    }
+
+    changeMode(mode) {
+        this.currentMode = mode;
+        console.log(`Mode changed to: ${mode}`);
+        // Adjust placeholder for user convenience
+        const placeholders = {
+            'ask': 'Ask me anything about code...',
+            'agent': 'Describe the goal and constraints, and I will propose actions...',
+            'edit': 'Paste code or text to edit and describe desired changes...',
+            'plan': 'Describe the project or goal and I will produce a plan...'
+        };
+        this.chatInput.placeholder = placeholders[mode] || placeholders['ask'];
     }
     
     startNewChat() {
@@ -395,6 +494,9 @@ class AmeckCopilot {
                 </div>
             </div>
         `;
+        this.currentMode = 'ask';
+        if (this.modeSelect) this.modeSelect.value = 'ask';
+        this.chatInput.placeholder = 'Ask me anything about code...';
     }
     
     async analyzeCode(operation) {

@@ -1,0 +1,42 @@
+{
+  "name": "ameck-copilot",
+  "displayName": "Ameck Copilot",
+  "description": "Ameck Copilot: AI coding assistant — open the web UI or start the local server from VS Code.",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "publisher": "<your-publisher>",
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:ameck-copilot.open",
+    "onCommand:ameck-copilot.startServer"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.78.0",
+    "vsce": "^2.0.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "ameck-copilot.open",
+        "title": "Ameck Copilot: Open Web UI",
+        "category": "Ameck Copilot"
+      },
+      {
+        "command": "ameck-copilot.startServer",
+        "title": "Ameck Copilot: Start Local Server",
+        "category": "Ameck Copilot"
+      }
+    ]
+  }
+}

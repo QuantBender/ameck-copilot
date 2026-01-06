@@ -15,6 +15,14 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
 
 
+class Mode(str, Enum):
+    """Mode of the assistant"""
+    ASK = "ask"
+    AGENT = "agent"
+    EDIT = "edit"
+    PLAN = "plan"
+
+
 class Message(BaseModel):
     """A single chat message"""
     role: MessageRole
@@ -34,6 +42,7 @@ class ChatRequest(BaseModel):
         default=[],
         description="Previous messages in the conversation"
     )
+    mode: Mode = Field(default=Mode.ASK, description="Mode to run the assistant in: 'ask', 'agent', 'edit', or 'plan'")
     stream: bool = Field(default=True, description="Whether to stream the response")
     temperature: Optional[float] = Field(
         default=None,
@@ -60,6 +69,8 @@ class ChatResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     model: str
     usage: Optional[dict] = None
+    structured: Optional[dict] = None  # Optional structured data (e.g., parsed Plan JSON)
+
 
 
 class CodeRequest(BaseModel):
