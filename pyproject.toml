@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ameck-copilot"
-version = "1.0.0"
+version = "1.0.1"
 description = "AI-powered coding assistant with a beautiful web interface, powered by free Groq API"
 readme = "README.md"
 license = "MIT"
