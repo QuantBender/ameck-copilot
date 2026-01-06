@@ -43,10 +43,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ameck/ameck-copilot"
-Repository = "https://github.com/ameck/ameck-copilot"
-Documentation = "https://github.com/ameck/ameck-copilot#readme"
-Issues = "https://github.com/ameck/ameck-copilot/issues"
+Homepage = "https://github.com/QuantBender/ameck-copilot"
+Repository = "https://github.com/QuantBender/ameck-copilot"
+Documentation = "https://github.com/QuantBender/ameck-copilot#readme"
+Issues = "https://github.com/QuantBender/ameck-copilot/issues"
 
 [project.scripts]
 ameck-copilot = "ameck_copilot.cli:main"
